@@ -32,7 +32,7 @@ public class FXMLDocumentController implements Initializable {
     
     
     @FXML
-    private TextArea textAreaContent;
+    private TextArea taContent;
     @FXML
     private Button btnConnection;
     @FXML
@@ -64,7 +64,7 @@ public class FXMLDocumentController implements Initializable {
             // We close the main socket (server listening)
             // And we return to the initial state 
             serverSocket.close();
-            textAreaContent.setText("");
+            taContent.setText("");
             btnDisconnection.setVisible(false);
             btnConnection.setVisible(true);
         } catch (IOException ex) {
@@ -72,7 +72,10 @@ public class FXMLDocumentController implements Initializable {
         }
     }
     
-    
+    // Place the "cursor" of the text area at the botom of it
+    private void goToTheEndOfTheTextAreaContent(){
+        taContent.positionCaret(taContent.getLength());
+    }
     
     private boolean waitingConnection() {
         
@@ -84,7 +87,8 @@ public class FXMLDocumentController implements Initializable {
             serverSocket = new ServerSocket(port);
             
             // Display the state of the server
-            textAreaContent.setText(" Le serveur écoute sur le port : "+serverSocket.getLocalPort()+" ...\n\n");
+            taContent.setText(taContent.getText()+"Le serveur écoute sur le port : "+serverSocket.getLocalPort()+" ...\n\n");
+            goToTheEndOfTheTextAreaContent();
             
             // Thread creation for for waiting all connections (start at the end of the method)
             waitingConnectionThread = new Thread(new Runnable() {
@@ -96,7 +100,8 @@ public class FXMLDocumentController implements Initializable {
                         try {
                             // We're waiting a connection and display an info 
                             socketClient = serverSocket.accept();
-                            textAreaContent.setText(textAreaContent.getText() + " " + socketClient.getInetAddress() + " veut se connecter, authentification en cours ..."+"\n\n");
+                            taContent.setText(taContent.getText() + " " + socketClient.getInetAddress() + " veut se connecter, authentification en cours ..."+"\n\n");
+                            goToTheEndOfTheTextAreaContent();
                             
                             userIdentification(socketClient);
                             
@@ -123,7 +128,8 @@ public class FXMLDocumentController implements Initializable {
 
         } catch (IOException ex) {
             System.out.println("Erreur : Port "+port+" déjà utilisé, ou mal fermé.");
-            textAreaContent.setText(textAreaContent.getText()+"Erreur : Port "+port+" déjà utilisé, ou mal fermé.\n\n");
+            taContent.setText(taContent.getText()+"Erreur : Port "+port+" déjà utilisé, ou mal fermé.\n\n");
+            goToTheEndOfTheTextAreaContent();
             
             return false;
             
@@ -140,15 +146,65 @@ public class FXMLDocumentController implements Initializable {
                 try {
                     // Directly after the socket connection, the client sends his username, so we get it
                     BufferedReader in = new BufferedReader(new InputStreamReader(socketClient.getInputStream()));
-                    String login = in.readLine();
-                    textAreaContent.setText(textAreaContent.getText()+"Login : "+login+"\n");
+                    String username = in.readLine();
+                    taContent.setText(taContent.getText()+username+" s'est connecté\n");
+                    goToTheEndOfTheTextAreaContent();
+                    // Launch the Chat with client - server
+                    chatting(socketClient, username);
                 } catch (IOException ex) {
                     System.out.println("ERROR in method : userIdentification() ex = "+ex.getMessage().toString());
                 }
+                
             }
         });
         
         identificationThread.start();
+    }
+    
+    // Get message from client
+    private void chatting(Socket socketClient, String username){
+        Thread chattingThread;
+        
+        chattingThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                String messageReceived;
+                BufferedReader in;
+                
+                try {
+                    
+                    // While there is a connection with the client
+                    while(!socketClient.isClosed()){
+                        // We get the messageReceived
+                        in = new BufferedReader(new InputStreamReader(socketClient.getInputStream()));
+                        messageReceived = in.readLine();
+                        
+                        // If it's quit, we disconnected the client (close the socket)
+                        if(messageReceived.equals("quit")){
+                            socketClient.close();
+                            taContent.setText(taContent.getText()+username+" c'est déconnecté\n");
+                            goToTheEndOfTheTextAreaContent();
+                            
+                        }
+                        // Else, we display the message
+                        else{
+                            taContent.setText(taContent.getText()+username+" : "+messageReceived+"\n");
+                            goToTheEndOfTheTextAreaContent();
+                       }
+
+
+                    }
+                } catch (IOException ex) {
+                    // If the socket is closed (certainly a bad close)
+                    taContent.setText(taContent.getText()+username+" c'est déconnecté\n");
+                    goToTheEndOfTheTextAreaContent();
+                }
+                
+            }
+        });
+        
+        chattingThread.start();
+                
     }
 
 }

@@ -1,0 +1,5 @@
+A faire
+
+- Récupérer le username, ip, socket et mettre dans un objet pour pouvoir lister toutes les personnes etc..
+
+- pouvoir ensuite dispatché les message a tout le monde, sauf celui qui a envoyer
