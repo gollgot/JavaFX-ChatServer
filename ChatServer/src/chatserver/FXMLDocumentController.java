@@ -5,11 +5,15 @@
  */
 package chatserver;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -73,6 +77,7 @@ public class FXMLDocumentController implements Initializable {
     private boolean waitingConnection() {
         
         int port = 23002;
+        Thread waitingConnectionThread;
         
         try {
             // initialisation of the socketServer, listening on the n port
@@ -82,15 +87,18 @@ public class FXMLDocumentController implements Initializable {
             textAreaContent.setText(" Le serveur écoute sur le port : "+serverSocket.getLocalPort()+" ...\n\n");
             
             // Thread creation for for waiting all connections (start at the end of the method)
-            Thread threadWaitingConnexion = new Thread(new Runnable() {
+            waitingConnectionThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
+                    int n = 0;
                     // When the serverSocket is closed (Clic on the disconnection button), we stop the thread
                     while(!serverSocket.isClosed()){
                         try {
                             // We're waiting a connection and display an info 
                             socketClient = serverSocket.accept();
                             textAreaContent.setText(textAreaContent.getText() + " " + socketClient.getInetAddress() + " veut se connecter, authentification en cours ..."+"\n\n");
+                            
+                            userIdentification(socketClient);
                             
                             // WIP -> on ajoute les adresses ip / pseudo etc... dans l'arraylist "test" defini au debut de la classe (pour etre dans tous les scopes)
                             /*test.add(socketClient.getInetAddress().getHostAddress());
@@ -108,8 +116,9 @@ public class FXMLDocumentController implements Initializable {
 
 
                 }
+
             });
-            threadWaitingConnexion.start();
+            waitingConnectionThread.start();
             return true;
 
         } catch (IOException ex) {
@@ -119,6 +128,27 @@ public class FXMLDocumentController implements Initializable {
             return false;
             
         }
+    }
+    
+    // Get the username of the new user
+    private void userIdentification(Socket socketClient) {
+        Thread identificationThread;  
+        
+        identificationThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Directly after the socket connection, the client sends his username, so we get it
+                    BufferedReader in = new BufferedReader(new InputStreamReader(socketClient.getInputStream()));
+                    String login = in.readLine();
+                    textAreaContent.setText(textAreaContent.getText()+"Login : "+login+"\n");
+                } catch (IOException ex) {
+                    System.out.println("ERROR in method : userIdentification() ex = "+ex.getMessage().toString());
+                }
+            }
+        });
+        
+        identificationThread.start();
     }
 
 }
