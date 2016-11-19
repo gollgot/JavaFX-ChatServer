@@ -68,6 +68,7 @@ public class FXMLDocumentController implements Initializable {
     @FXML
     private void btnDisconnectionActionPerformed(ActionEvent event) {
         try {
+            sendToAll("[ServerDisconnected]");
             // Close All socket of user online
             for (int i = 0; i < listUsers.size(); i++) {
                 listUsers.get(i).getSocket().close();
