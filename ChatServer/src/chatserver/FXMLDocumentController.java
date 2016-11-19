@@ -8,6 +8,7 @@ package chatserver;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
@@ -94,23 +95,31 @@ public class FXMLDocumentController implements Initializable {
     }
     
     private void updateOnlineUserTextArea(){
+        String userConnectedWithIp = "";
         String userConnected = "";
         for (int i = 0; i < listUsers.size(); i++) {
             if(listUsers.get(i).getSocket().isConnected()){
-                userConnected += listUsers.get(i).getUserName()+" ("+listUsers.get(i).getIp()+")"+"\n";
+                userConnectedWithIp += listUsers.get(i).getUserName()+" ("+listUsers.get(i).getIp()+")"+"\n";
+                userConnected += listUsers.get(i).getUserName()+";";
             }
         }
         taOnlineUsers.setText("");
-        taOnlineUsers.setText(userConnected);
+        taOnlineUsers.setText(userConnectedWithIp);
+        sendToAll("[OnlineUsers];"+userConnected);
     }
     
     // get the time when you call the method
     private String getTimeFormated(){
+        String time = "";
         int hours = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         int minutes = Calendar.getInstance().get(Calendar.MINUTE);
         int seconds = Calendar.getInstance().get(Calendar.SECOND);
+        if(seconds < 10){
+            time = hours+":"+minutes+":0"+seconds+" ";
+        }else{
+            time = hours+":"+minutes+":"+seconds+" ";
+        } 
         
-        String time = hours+":"+minutes+":"+seconds+" ";
         return time;
     }
     
@@ -259,6 +268,19 @@ public class FXMLDocumentController implements Initializable {
         
         chattingThread.start();
                 
+    }
+    
+    private void sendToAll(String message){
+        System.out.println(message);
+        for (int i = 0; i < listUsers.size(); i++) {
+            try {
+                PrintWriter out = new PrintWriter(listUsers.get(i).getSocket().getOutputStream());
+                out.println(message);
+                out.flush();
+            } catch (IOException ex) {
+                System.out.println("ERROR in method : sendToAll ex = "+ex.getMessage().toString());
+            }
+        }
     }
 
 }
