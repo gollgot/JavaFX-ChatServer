@@ -97,7 +97,7 @@ public class FXMLDocumentController implements Initializable {
         String userConnected = "";
         for (int i = 0; i < listUsers.size(); i++) {
             if(listUsers.get(i).getSocket().isConnected()){
-                userConnected += listUsers.get(i).getUserName()+"\n";
+                userConnected += listUsers.get(i).getUserName()+" ("+listUsers.get(i).getIp()+")"+"\n";
             }
         }
         taOnlineUsers.setText("");
