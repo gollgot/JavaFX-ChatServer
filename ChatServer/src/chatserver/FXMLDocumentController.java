@@ -12,6 +12,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -52,6 +53,7 @@ public class FXMLDocumentController implements Initializable {
 
     @FXML
     private void btnConnectionActionPerformed(ActionEvent event) {
+        taContent.setText("");
         // We waiting a connection
         // -> if there is a connection (true) (all it's right) we do the connection
         // -> False is returned when : If the server has a problem, in the method "waitingConnection", in the "Catch" 
@@ -65,6 +67,10 @@ public class FXMLDocumentController implements Initializable {
     @FXML
     private void btnDisconnectionActionPerformed(ActionEvent event) {
         try {
+            // Close All socket of user online
+            for (int i = 0; i < listUsers.size(); i++) {
+                listUsers.get(i).getSocket().close();
+            }
             // We close the main socket (server listening)
             // And we return to the initial state 
             serverSocket.close();
@@ -87,15 +93,39 @@ public class FXMLDocumentController implements Initializable {
         }
     }
     
-    // Add or Delete user from the taOnlineUser
-    private void updateTextAreaOnlineUser(String type, User user){
-        if(type == "add"){
-            taOnlineUsers.setText(taOnlineUsers.getText()+user.getUserName()+"\n");
-            goToTheEndOfTheTextArea("onlineUser");
-        }else if(type == "deleteAll"){
-            taOnlineUsers.setText("");
-            listUsers.clear();
-        }               
+    private void updateOnlineUserTextArea(){
+        String userConnected = "";
+        for (int i = 0; i < listUsers.size(); i++) {
+            if(listUsers.get(i).getSocket().isConnected()){
+                userConnected += listUsers.get(i).getUserName()+"\n";
+            }
+        }
+        taOnlineUsers.setText("");
+        taOnlineUsers.setText(userConnected);
+    }
+    
+    // get the time when you call the method
+    private String getTimeFormated(){
+        int hours = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        int minutes = Calendar.getInstance().get(Calendar.MINUTE);
+        int seconds = Calendar.getInstance().get(Calendar.SECOND);
+        
+        String time = hours+":"+minutes+":"+seconds+" ";
+        return time;
+    }
+    
+    private void disconnectUser(String username){
+        for (int i = 0; i < listUsers.size(); i++) {
+            if(listUsers.get(i).getUserName() == username){
+                try {
+                    listUsers.get(i).getSocket().close();
+                    listUsers.remove(i);
+                } catch (IOException ex) {
+                    System.out.println("Error on method 'disconnectUser' ex:"+ex.getMessage().toString());
+                }
+            }
+        }
+        updateOnlineUserTextArea();
     }
     
     private boolean waitingConnection() {
@@ -108,7 +138,7 @@ public class FXMLDocumentController implements Initializable {
             serverSocket = new ServerSocket(port);
             
             // Display the state of the server
-            taContent.setText(taContent.getText()+"Le serveur écoute sur le port : "+serverSocket.getLocalPort()+" ...\n\n");
+            taContent.setText(taContent.getText()+getTimeFormated()+"Le serveur écoute sur le port : "+serverSocket.getLocalPort()+" ...\n");
             goToTheEndOfTheTextArea("content");
             
             // Thread creation for for waiting all connections (start at the end of the method)
@@ -121,17 +151,11 @@ public class FXMLDocumentController implements Initializable {
                         try {
                             // We're waiting a connection and display an info 
                             socketClient = serverSocket.accept();
-                            taContent.setText(taContent.getText() + " " + socketClient.getInetAddress() + " veut se connecter, authentification en cours ..."+"\n\n");
+                            taContent.setText(taContent.getText()+getTimeFormated()+socketClient.getInetAddress() + " veut se connecter, authentification en cours ..."+"\n");
                             goToTheEndOfTheTextArea("content");
                             
                             userIdentification(socketClient);
-                            
-                            // WIP -> on ajoute les adresses ip / pseudo etc... dans l'arraylist "test" defini au debut de la classe (pour etre dans tous les scopes)
-                            /*test.add(socketClient.getInetAddress().getHostAddress());
-                            for (int i = 0; i < test.size(); i++) {
-                                // On affiche toutes les personnes connectés a chaques fois
-                                System.out.println("Personne : "+test.get(i));
-                            }*/
+
                         } catch (IOException ex) {
                             System.out.println("Erreur Serveur : "+ ex.getMessage());
                         }
@@ -149,7 +173,7 @@ public class FXMLDocumentController implements Initializable {
 
         } catch (IOException ex) {
             System.out.println("Erreur : Port "+port+" déjà utilisé, ou mal fermé.");
-            taContent.setText(taContent.getText()+"Erreur : Port "+port+" déjà utilisé, ou mal fermé.\n\n");
+            taContent.setText(taContent.getText()+getTimeFormated()+"Erreur : Port "+port+" déjà utilisé, ou mal fermé.\n");
             goToTheEndOfTheTextArea("content");
             
             return false;
@@ -168,13 +192,14 @@ public class FXMLDocumentController implements Initializable {
                     // Directly after the socket connection, the client sends his username, so we get it
                     BufferedReader in = new BufferedReader(new InputStreamReader(socketClient.getInputStream()));
                     String username = in.readLine();
-                    taContent.setText(taContent.getText()+username+" s'est connecté\n");
+                    taContent.setText(taContent.getText()+getTimeFormated()+username+" s'est connecté\n");
                     goToTheEndOfTheTextArea("content");
                     
                     // We create a User object and we add the user on the list and update the taOnlineUser
                     User user = new User(username, socketClient, socketClient.getInetAddress());
                     listUsers.add(user);
-                    updateTextAreaOnlineUser("add", user);
+                    //updateTextAreaOnlineUser("add", user);
+                    updateOnlineUserTextArea();
                     
                     // Launch the Chat with client - server
                     chatting(socketClient, username);
@@ -207,15 +232,16 @@ public class FXMLDocumentController implements Initializable {
                         messageReceived = in.readLine();
                         
                         // If it's quit, we disconnected the client (close the socket)
-                        if(messageReceived.equals("quit")){
+                        if(messageReceived.equals("/quit")){
                             socketClient.close();
-                            taContent.setText(taContent.getText()+username+" c'est déconnecté\n");
+                            taContent.setText(taContent.getText()+getTimeFormated()+username+" c'est déconnecté\n");
                             goToTheEndOfTheTextArea("content");
                             
+                            disconnectUser(username);
                         }
                         // Else, we display the message
                         else{
-                            taContent.setText(taContent.getText()+username+" : "+messageReceived+"\n");
+                            taContent.setText(taContent.getText()+getTimeFormated()+username+" : "+messageReceived+"\n");
                             goToTheEndOfTheTextArea("content");
                        }
 
@@ -223,8 +249,9 @@ public class FXMLDocumentController implements Initializable {
                     }
                 } catch (IOException ex) {
                     // If the socket is closed (certainly a bad close)
-                    taContent.setText(taContent.getText()+username+" c'est déconnecté\n");
+                    taContent.setText(taContent.getText()+getTimeFormated()+username+" c'est déconnecté\n");
                     goToTheEndOfTheTextArea("content");
+                    disconnectUser(username);
                 }
                 
             }
