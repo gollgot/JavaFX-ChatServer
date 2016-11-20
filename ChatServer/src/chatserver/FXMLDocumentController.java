@@ -68,7 +68,7 @@ public class FXMLDocumentController implements Initializable {
     @FXML
     private void btnDisconnectionActionPerformed(ActionEvent event) {
         try {
-            sendToAll("[ServerDisconnected]");
+            sendToAll("[ServerDisconnected]", "[noExept]");
             // Close All socket of user online
             for (int i = 0; i < listUsers.size(); i++) {
                 listUsers.get(i).getSocket().close();
@@ -106,7 +106,7 @@ public class FXMLDocumentController implements Initializable {
         }
         taOnlineUsers.setText("");
         taOnlineUsers.setText(userConnectedWithIp);
-        sendToAll("[OnlineUsers];"+userConnected);
+        sendToAll("[OnlineUsers];"+userConnected, "[noExept]");
     }
     
     // get the time when you call the method
@@ -249,10 +249,13 @@ public class FXMLDocumentController implements Initializable {
                             
                             disconnectUser(username);
                         }
-                        // Else, we display the message
+                        // Else, we display the message on the content text area and we send to all other users the message
                         else{
                             taContent.setText(taContent.getText()+getTimeFormated()+username+" : "+messageReceived+"\n");
                             goToTheEndOfTheTextArea("content");
+                            // Send to all, exept the user who send the message
+                            messageReceived = getTimeFormated()+username+" : "+messageReceived;
+                            sendToAll(messageReceived, username);
                        }
 
 
@@ -271,15 +274,17 @@ public class FXMLDocumentController implements Initializable {
                 
     }
     
-    private void sendToAll(String message){
+    private void sendToAll(String message, String exeptUser){
         System.out.println(message);
         for (int i = 0; i < listUsers.size(); i++) {
-            try {
-                PrintWriter out = new PrintWriter(listUsers.get(i).getSocket().getOutputStream());
-                out.println(message);
-                out.flush();
-            } catch (IOException ex) {
-                System.out.println("ERROR in method : sendToAll ex = "+ex.getMessage().toString());
+            if(listUsers.get(i).getUserName() != exeptUser){
+                try {
+                    PrintWriter out = new PrintWriter(listUsers.get(i).getSocket().getOutputStream());
+                    out.println(message);
+                    out.flush();
+                } catch (IOException ex) {
+                    System.out.println("ERROR in method : sendToAll ex = "+ex.getMessage().toString());
+                }
             }
         }
     }

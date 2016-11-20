@@ -6,10 +6,12 @@
 package chatserver;
 
 import javafx.application.Application;
+import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
 /**
  *
@@ -25,6 +27,14 @@ public class ChatServer extends Application {
         
         stage.setScene(scene);
         stage.setResizable(false);
+        // When the red cross (right top) is clicked
+        stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
+            @Override
+            public void handle(WindowEvent event) {
+                // We close the programm
+                System.exit(0);
+            }
+        });
         stage.show();
     }
 
