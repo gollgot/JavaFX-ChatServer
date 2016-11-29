@@ -208,9 +208,9 @@ public class FXMLDocumentController implements Initializable {
                     // We create a User object and we add the user on the list and update the taOnlineUser
                     User user = new User(username, socketClient, socketClient.getInetAddress());
                     listUsers.add(user);
-                    //updateTextAreaOnlineUser("add", user);
+                    //updateTextAreaOnlineUser();
                     updateOnlineUserTextArea();
-                    
+                    sendToAll(username+" s'est connecté", username);
                     // Launch the Chat with client - server
                     chatting(socketClient, username);
                 } catch (IOException ex) {
@@ -246,6 +246,8 @@ public class FXMLDocumentController implements Initializable {
                             socketClient.close();
                             taContent.setText(taContent.getText()+getTimeFormated()+username+" c'est déconnecté\n");
                             goToTheEndOfTheTextArea("content");
+                            
+                            sendToAll(username+" s'est déconnecté", username);
                             
                             disconnectUser(username);
                         }
