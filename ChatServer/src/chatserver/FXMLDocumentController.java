@@ -42,8 +42,6 @@ public class FXMLDocumentController implements Initializable {
     @FXML
     private Button btnDisconnection;
     @FXML
-    private Label label;
-    @FXML
     private TextArea taOnlineUsers;
     
     @Override
